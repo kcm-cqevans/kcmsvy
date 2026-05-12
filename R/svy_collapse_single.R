@@ -1,3 +1,22 @@
+#' Title
+#' @import dplyr
+#' @import rlang
+#' @importFrom srvyr as_survey_design survey_prop
+#' @importFrom dplyr across
+#'
+#' @param data dataset that you are using
+#' @param element_var the variable that you want to take the weighted mean or weighted proportion of, element_var ="commute_freq"
+#' @param wgt wgt = survey weight, if you're not using weights, just create a column called wgt that is all equal to 1
+#'
+#' @returns a collapsed set of survey-weighted means
+#' @export
+#'
+#' @examples
+#' test <- data.frame(
+#'   rider = c("A", "B", "A", "C"),
+#'   wgt   = c(1.2, 0.8, 1.1, 0.9)
+#' )
+#' collapsed<-svy_collapse_single(data=test, element_var = "rider", wgt="wgt")
 svy_collapse_single <- function(data, element_var = NULL, wgt = NULL) {
   # Default to canonical names if present
   element_var <- if (is.null(element_var)) "element_var" else element_var
