@@ -15,7 +15,8 @@ kcmviz_bar(
   subtitle = "",
   source_info = "",
   order = c("ascend", "descend", "none"),
-  color_scheme = "#006633",
+  color_scheme = NULL,
+  colors = NULL,
   horiz = TRUE,
   textsize_yaxis = 16,
   textsize_xaxis = 16

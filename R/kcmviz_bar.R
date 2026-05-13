@@ -31,118 +31,152 @@
 #' @export
 #'
 
-kcmviz_bar<-function(data,
-                     axis_var = NULL,   # string; auto-detect "axis_var" if NULL
-                     prop        = NULL,   # string; auto-detect "prop" or "percent" if NULL
-                     proplabel   = NULL,   # string; auto-detect "proplabel" if NULL
-                     ymin = 0,
-                     ymax = 100,
-                     main_title = "",
-                     subtitle = "",
-                     source_info = "",
-                     order = c("ascend", "descend", "none"),
-                     color_scheme = "#006633",
-                     horiz = TRUE,         # caller intent; inverted internally via flip
-                     textsize_yaxis = 16,
-                     textsize_xaxis = 16) {
+kcmviz_bar <- function(
+    data,
+    axis_var = NULL,
+    prop = NULL,
+    proplabel = NULL,
+    ymin = 0,
+    ymax = 100,
+    main_title = "",
+    subtitle = "",
+    source_info = "",
+    order = c("ascend", "descend", "none"),
+    color_scheme = NULL,   # name in COLOR_SCHEMES
+    colors = NULL,         # optional custom colors
+    horiz = TRUE,          # ★ now TRUE = horizontal bars
+    textsize_yaxis = 16,
+    textsize_xaxis = 16
+) {
 
   order <- match.arg(order)
 
-  # --- Invert horizontal behavior (as per your earlier requirement) ---
-  flip <- !isTRUE(horiz)  # horiz=TRUE -> vertical; horiz=FALSE -> horizontal
+  # ------------------------------------------------------------
+  # ORIENTATION logic (Option A)
+  # ------------------------------------------------------------
+  flip <- isTRUE(horiz)   # horiz=TRUE → horizontal bars
 
-  # --- Auto-detect axis_var if not provided ---
+  # ------------------------------------------------------------
+  # COLUMN AUTO-DETECTION
+  # ------------------------------------------------------------
   if (is.null(axis_var)) {
-    if ("axis_var" %in% names(data)) {
-      axis_var <- "axis_var"
-    } else {
-      stop("Please provide `axis_var`, or include a column named 'axis_var' in `data`.")
-    }
+    if ("axis_var" %in% names(data)) axis_var <- "axis_var"
+    else stop("Please provide axis_var or include a column named axis_var.")
   }
-  if (!axis_var %in% names(data)) {
-    stop("`axis_var` not found in `data`: ", axis_var)
-  }
+  if (!axis_var %in% names(data))
+    stop("axis_var not found in data: ", axis_var)
 
-  # --- Auto-detect prop if not provided ---
   if (is.null(prop)) {
-    if ("prop" %in% names(data)) {
-      prop <- "prop"
-    } else if ("percent" %in% names(data)) {
-      prop <- "percent"
-    } else {
-      stop("Could not auto-detect a proportion column. Provide `prop` (e.g., 'prop' or 'percent').")
-    }
+    if ("prop" %in% names(data)) prop <- "prop"
+    else if ("percent" %in% names(data)) prop <- "percent"
+    else stop("Could not auto-detect proportion column.")
   }
-  if (!prop %in% names(data)) {
-    stop("`prop` not found in `data`: ", prop)
-  }
+  if (!prop %in% names(data))
+    stop("prop column missing: ", prop)
 
-  # --- Auto-detect proplabel if not provided ---
   if (is.null(proplabel) && "proplabel" %in% names(data)) {
     proplabel <- "proplabel"
   }
-  if (!is.null(proplabel) && !proplabel %in% names(data)) {
-    stop("`proplabel` not found in `data`: ", proplabel)
-  }
+  if (!is.null(proplabel) && !proplabel %in% names(data))
+    stop("proplabel column missing: ", proplabel)
 
-  # --- Prepare plotting frame ---
+  # ------------------------------------------------------------
+  # DATA PREP
+  # ------------------------------------------------------------
   df <- data %>%
     mutate(
       .x    = .data[[axis_var]],
       .prop = .data[[prop]],
-      # Convert 0–1 proportions to percent; leave 0–100 as-is
-      .prop = if (is.numeric(.prop) && max(.prop, na.rm = TRUE) <= 1) .prop * 100 else .prop,
-      .lab  = if (!is.null(proplabel)) .data[[proplabel]] else paste0(round(.prop, 1), "%")
+      .prop = if (is.numeric(.prop) && max(.prop, na.rm = TRUE) <= 1)
+        .prop * 100 else .prop,
+      .lab  = if (!is.null(proplabel)) .data[[proplabel]]
+      else paste0(round(.prop, 1), "%")
     )
 
-  # --- Order rows by .prop ---
+  # ------------------------------------------------------------
+  # ORDERING
+  # ------------------------------------------------------------
   df <- switch(
     order,
     "ascend"  = df %>% arrange(.prop),
     "descend" = df %>% arrange(desc(.prop)),
     "none"    = df
   )
-
-  # Preserve sorted order in the axis
   df <- df %>% mutate(.x = factor(.x, levels = .x))
 
-  # --- Build base plot ---
-  update_geom_defaults("text", list(family = "sans"))
+  # ------------------------------------------------------------
+  # COLORS (GLOBAL SYSTEM)
+  # ------------------------------------------------------------
+  if (!is.null(colors)) {
+    mycolors <- colors
+  } else if (!is.null(color_scheme)) {
+    if (!color_scheme %in% names(COLOR_SCHEMES))
+      stop("color_scheme not found in COLOR_SCHEMES.")
+    mycolors <- COLOR_SCHEMES[[color_scheme]]
+  } else {
+    mycolors <- DEFAULT_SINGLE_BAR_COLORS
+  }
 
+  bar_color <- mycolors[1]
+
+  # ------------------------------------------------------------
+  # BASE PLOT
+  # ------------------------------------------------------------
   p <- ggplot(df, aes(x = .x, y = .prop)) +
-    geom_col(color = color_scheme, fill = color_scheme, width = 0.75) +
-    geom_text(aes(label = .lab),
-              vjust = if (flip) 0.5 else -0.5,
-              hjust = if (flip) -0.1 else 0.5,
-              size  = 6, fontface = "bold", color = color_scheme) +
-    scale_y_continuous(limits = c(ymin, ymax),
-                       expand = c(0, 0.3),
-                       labels = function(x) paste0(x, "%")) +
-    scale_x_discrete(labels = function(x) str_wrap(x, width = if (flip) 50 else 9)) +
-    labs(title   = main_title,
-         y       = "",
-         x       = "",
-         caption = source_info,
-         subtitle = subtitle) +
+    geom_col(color = bar_color, fill = bar_color, width = 0.75) +
+    geom_text(
+      aes(label = .lab),
+      vjust = if (!flip) -0.5 else 0.5,   # vertical vs horizontal
+      hjust = if (flip) -0.1 else 0.5,
+      size  = 6,
+      fontface = "bold",
+      color = bar_color
+    ) +
+    scale_y_continuous(
+      limits = c(ymin, ymax),
+      expand = c(0, 0.03),
+      labels = function(x) paste0(x, "%")
+    ) +
+    scale_x_discrete(
+      labels = function(x) str_wrap(x, width = if (flip) 45 else 9)
+    ) +
+    labs(
+      title = main_title,
+      subtitle = subtitle,
+      caption = source_info,
+      y = "",
+      x = ""
+    ) +
     theme(
       text = element_text(size = 18, family = "sans"),
-      plot.title = element_text(size = 24, family = "sans", face = "bold"),
-      plot.caption = element_text(size = 16, hjust = 0.02, vjust = 2, family = "sans", color = "#585860"),
-      plot.subtitle = element_text(size = 18, family = "sans", color = "#242424"),
-      axis.line = element_line(size = 0.5, color = "black"),
-      plot.title.position = "plot",
+      plot.title = element_text(size = 24, face = "bold"),
+      plot.subtitle = element_text(size = 18, color = "#242424"),
+
+      # ★ Caption aligned perfectly left
+      plot.caption = element_text(size = 16, hjust = 0, color = "#585860"),
       plot.caption.position = "plot",
-      axis.text.x = element_text(size = textsize_xaxis, family = "sans", color = "black"),
-      axis.text.y = element_text(size = textsize_yaxis, family = "sans", color = "black"),
+
+      axis.line = element_line(size = 0.5, color = "black"),
+      axis.text.x = element_text(size = textsize_xaxis, color = "black"),
+      axis.text.y = element_text(size = textsize_yaxis, color = "black"),
       panel.background = element_rect(fill = "white"),
-      panel.grid.major.y = if (!flip) element_line(color = "#585860", size = 0.35, linetype = 2) else element_blank(),
-      panel.grid.major.x = if (flip) element_line(color = "#585860", size = 0.35, linetype = 2) else element_blank()
+
+      panel.grid.major.y =
+        if (!flip) element_line(color = "#585860", size = 0.35, linetype = 2)
+      else element_blank(),
+      panel.grid.major.x =
+        if (flip) element_line(color = "#585860", size = 0.35, linetype = 2)
+      else element_blank(),
+
+      # ★ Ensures caption aligns to far left edge even after coord_flip()
+      plot.margin = margin(t = 20, r = 20, b = 20, l = 5)
     )
 
-  # Apply coord_flip() for horizontal (based on inverted flag)
-  if (flip) {
+  # ------------------------------------------------------------
+  # HORIZONTAL OR VERTICAL
+  # ------------------------------------------------------------
+  if (flip)
     p <- p + coord_flip()
-  }
 
   return(p)
 }

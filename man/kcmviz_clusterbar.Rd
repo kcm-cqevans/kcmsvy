@@ -8,22 +8,23 @@ For example, you might might to show the proportion of people who cite each barr
 \usage{
 kcmviz_clusterbar(
   data,
-  element_var = NULL,
-  prop = data$prop,
-  lower_bound = data$prop_low,
-  upper_bound = data$prop_upp,
-  proplabel = data$proplabel,
+  axis_var = NULL,
+  prop = NULL,
+  proplabel = NULL,
   groupby_var = NULL,
+  lower_bound = NULL,
+  upper_bound = NULL,
   ymin = 0,
   ymax = 100,
   main_title = "",
-  source_info = "",
   subtitle = "",
+  source_info = "",
   sort = "",
   horiz = TRUE,
   y_label = "",
   x_label = "",
-  color_scheme = c("#390854", "#F57F29", "#FDB71A", "#31859F", "#006633"),
+  color_scheme = NULL,
+  colors = NULL,
   label_size = 4.25,
   text_position = 0.75,
   textsize_yaxis = 16,
@@ -33,17 +34,15 @@ kcmviz_clusterbar(
 \arguments{
 \item{data}{Data frame that you are referencing}
 
-\item{element_var}{The axis variable, in the example above - this will be the column that holds all of the barrier types.}
-
 \item{prop}{This is the calculated proportion, without formatting for display}
-
-\item{lower_bound}{lower bound of confidence intervals}
-
-\item{upper_bound}{upper bound of confidence intervals}
 
 \item{proplabel}{The labelled proportion variable. This is the actual value you will be displaying, ideally in format XX.X%}
 
 \item{groupby_var}{This is the grouping variable. In the example above, this will be rider status.}
+
+\item{lower_bound}{lower bound of confidence sansvals}
+
+\item{upper_bound}{upper bound of confidence sansvals}
 
 \item{ymin}{Value 0-100 where you want you graph axis to start, can be left blank}
 
@@ -51,9 +50,9 @@ kcmviz_clusterbar(
 
 \item{main_title}{Title of your graph, goes top left}
 
-\item{source_info}{Source information, goes bottom left. Example "Source: Rider/Non-Rider 2024"}
-
 \item{subtitle}{Subtitle - if applicable.}
+
+\item{source_info}{Source information, goes bottom left. Example "Source: Rider/Non-Rider 2024"}
 
 \item{sort}{Sort - the way you want to order bars -- default is alphabetically. sort="group1_asc" will sort in ascending order the values for group 1 (e.g., riders), sort="group2_desc" will sort in descending order based on values for group 2 (e.g., non-riders)}
 
@@ -72,6 +71,8 @@ kcmviz_clusterbar(
 \item{textsize_yaxis}{Text size of y axis}
 
 \item{textsize_xaxis}{Text size of x axis}
+
+\item{axis_bar}{The axis variable, in the example above - this will be the column that holds all of the barrier types.}
 }
 \value{
 A nice pretty graph

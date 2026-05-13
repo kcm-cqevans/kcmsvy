@@ -17,10 +17,10 @@ LazyData: true
 RoxygenNote: 7.3.3
 Imports: 
     dplyr,
-    ggplot,
     ggplot2,
     ggrepel,
     ggtext,
     rlang,
     srvyr,
-    stringr
+    stringr,
+    tidyr

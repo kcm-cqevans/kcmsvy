@@ -1,4 +1,3 @@
-
 #' KCM Data Visualization - Clustered Bar Chart
 #' For showing proportions of an X variable across group Z.
 #' For example, you might might to show the proportion of people who cite each barrier to transit use across their rider status.
@@ -27,152 +26,221 @@
 #'
 #' @return A nice pretty graph
 #' @export
-kcmviz_clusterbar_test<- function(data,
-                             axis_var = NULL,
-                             prop = data$prop,
-                             lower_bound = data$prop_low, upper_bound = data$prop_upp,
-                             proplabel = data$proplabel,
-                             groupby_var =NULL,
-                             ymin = 0, ymax = 100,
-                             main_title = "", source_info = "", subtitle = "",
-                             sort = "",
-                             horiz = TRUE,
-                             y_label = "", x_label = "",
-                             color_scheme = c("#390854", "#F57F29", "#FDB71A", "#31859F", "#006633"),
-                             label_size = 4.25,
-                             text_position = 0.75,
-                             textsize_yaxis = 16,
-                             textsize_xaxis = 16) {
-  # Ensure expected columns exist
-  needed <- c("axis_var", "prop", "proplabel", "groupby_var")
-  miss <- setdiff(needed, names(data))
-  if (length(miss) > 0) {
-    stop("Missing columns in `data`: ", paste(miss, collapse = ", "))
+
+
+kcmviz_clusterbar <- function(
+    data,
+    axis_var = NULL,
+    prop = NULL,
+    proplabel = NULL,
+    groupby_var = NULL,
+    lower_bound = NULL,
+    upper_bound = NULL,
+    ymin = 0,
+    ymax = 100,
+    main_title = "",
+    subtitle = "",
+    source_info = "",
+    sort = "",
+    horiz = TRUE,
+    y_label = "",
+    x_label = "",
+    color_scheme = NULL,   # uses global COLOR_SCHEMES
+    colors = NULL,         # user custom palette
+    label_size = 4.25,
+    text_position = 0.75,
+    textsize_yaxis = 16,
+    textsize_xaxis = 16
+) {
+
+  # ------------------------------------------------------------
+  # ORIENTATION (Option A)
+  # horiz = TRUE → horizontal chart → coord_flip()
+  # ------------------------------------------------------------
+  flip <- isTRUE(horiz)
+
+  # ------------------------------------------------------------
+  # AUTO-DETECT COLUMNS (consistent with bar + stacked)
+  # ------------------------------------------------------------
+  # axis_var
+  if (is.null(axis_var)) {
+    if ("axis_var" %in% names(data)) axis_var <- "axis_var"
+    else stop("Please supply axis_var.")
+  }
+  if (!axis_var %in% names(data))
+    stop("axis_var not found in data: ", axis_var)
+
+  # prop column
+  if (is.null(prop)) {
+    if ("prop" %in% names(data)) prop <- "prop"
+    else if ("percent" %in% names(data)) prop <- "percent"
+    else stop("Could not auto-detect prop column.")
+  }
+  if (!prop %in% names(data))
+    stop("prop not found in data: ", prop)
+
+  # proplabel
+  if (is.null(proplabel) && "proplabel" %in% names(data)) {
+    proplabel <- "proplabel"
+  }
+  if (!is.null(proplabel) && !proplabel %in% names(data)) {
+    stop("proplabel not found: ", proplabel)
   }
 
-  # Compute the desired order of axis_var based on sort directive
-  # All groups will use the same x-order derived from the specified target group.
-  # "group1_asc"/"group1_desc" -> use the first group level;
-  # "group2_asc"/"group2_desc" -> second level; "group3_*" -> third level.
-  get_target_group_order <- function(df, group_index, ascending = TRUE) {
-    lvls <- unique(df$groupby_var)
-    if (length(lvls) < group_index) {
-      stop("Requested group index ", group_index, " but only ",
-           length(lvls), " group(s) present.")
+  # --- AUTO-DETECT groupby_var (your requested logic)
+  if (is.null(groupby_var)) {
+    if ("groupby_var" %in% names(data)) {
+      groupby_var <- "groupby_var"
+    } else {
+      stop("Please supply groupby_var or include a column named 'groupby_var'.")
     }
-    target <- lvls[group_index]
-    out <- df %>%
-      filter(groupby_var == target) %>%
-      arrange(if (ascending) prop else desc(prop)) %>%
-      pull(axis_var)
-    # In case of ties, `arrange` is stable; ensure unique order
-    unique(out)
   }
+  if (!groupby_var %in% names(data))
+    stop("groupby_var not found in data: ", groupby_var)
 
-  # Derive the order vector based on `sort`
-  order_vec <- NULL
-  if (sort == "group1_asc") {
-    order_vec <- get_target_group_order(data, group_index = 1, ascending = TRUE)
-  } else if (sort == "group1_desc") {
-    order_vec <- get_target_group_order(data, group_index = 1, ascending = FALSE)
-  } else if (sort == "group2_asc") {
-    order_vec <- get_target_group_order(data, group_index = 2, ascending = TRUE)
-  } else if (sort == "group2_desc") {
-    order_vec <- get_target_group_order(data, group_index = 2, ascending = FALSE)
-  } else if (sort == "group3_asc") {
-    order_vec <- get_target_group_order(data, group_index = 3, ascending = TRUE)
-  } else if (sort == "group3_desc") {
-    order_vec <- get_target_group_order(data, group_index = 3, ascending = FALSE)
-  } else if (sort == "alpha") {
-    order_vec <- sort(unique(data$axis_var))
-  }
 
-  # If we computed an order, set factor levels on axis_var
-  if (!is.null(order_vec)) {
-    # Include any levels not present in the target (e.g., if some axis_var only appears in other groups)
-    all_levels <- unique(c(order_vec, unique(data$axis_var)))
-    # Keep target-derived levels first, followed by any extras in alpha order to avoid NA placement
-    extras <- setdiff(all_levels, order_vec)
-    final_levels <- c(order_vec, sort(extras))
-    data <- data %>%
-      mutate(
-        axis_var = factor(axis_var, levels = final_levels)
-      )
-  } else {
-    # Default: keep current order of appearance
-    data <- data %>%
-      mutate(axis_var = factor(axis_var, levels = unique(axis_var)))
-  }
-
-  # Colors
-  fill_colors <- paste0(color_scheme, "")
-
-  # Shared plot bits
-
-  base_plot <- ggplot(
-    data = data,
-    aes(
-      x = factor(axis_var, levels = levels(axis_var)),
-      y = prop,
-      fill = groupby_var,
-      color = groupby_var
+  # ------------------------------------------------------------
+  # PREP DATA
+  # ------------------------------------------------------------
+  df <- data %>%
+    mutate(
+      .x     = .data[[axis_var]],
+      .group = .data[[groupby_var]],
+      .prop  = .data[[prop]],
+      .prop  = if (max(.prop, na.rm = TRUE) <= 1) .prop * 100 else .prop,
+      .lab   = if (!is.null(proplabel)) .data[[proplabel]]
+      else paste0(round(.prop, 1), "%")
     )
-  ) +
-    geom_bar(position = "dodge", stat = "identity", width = 0.75) +
+
+  # ------------------------------------------------------------
+  # SORTING
+  # ------------------------------------------------------------
+  if (sort %in% c("group1_asc", "group1_desc",
+                  "group2_asc", "group2_desc",
+                  "group3_asc", "group3_desc")) {
+
+    gindex    <- as.numeric(substr(sort, 6, 6))
+    ascending <- grepl("asc$", sort)
+    g_levels  <- unique(df$.group)
+
+    if (length(g_levels) < gindex)
+      stop("Not enough groups for sorting index.")
+
+    target_group <- g_levels[gindex]
+
+    ordering <- df %>%
+      filter(.group == target_group) %>%
+      arrange(if (ascending) .prop else desc(.prop)) %>%
+      pull(.x)
+
+    extras       <- setdiff(unique(df$.x), ordering)
+    final_levels <- c(ordering, sort(extras))
+
+    df <- df %>% mutate(.x = factor(.x, levels = final_levels))
+
+  } else if (sort == "alpha") {
+
+    df <- df %>% mutate(.x = factor(.x, levels = sort(unique(.x))))
+
+  } else {
+
+    df <- df %>% mutate(.x = factor(.x, levels = unique(.x)))
+  }
+
+
+  # ------------------------------------------------------------
+  # COLOR SYSTEM (global + custom)
+  # ------------------------------------------------------------
+  if (!is.null(colors)) {
+    mycolors <- colors
+  } else if (!is.null(color_scheme)) {
+    if (!color_scheme %in% names(COLOR_SCHEMES))
+      stop("Unknown color_scheme: ", color_scheme)
+    mycolors <- COLOR_SCHEMES[[color_scheme]]
+  } else {
+    mycolors <- DEFAULT_CLUSTER_COLORS
+  }
+
+  n_groups <- length(unique(df$.group))
+  mycolors <- mycolors[seq_len(n_groups)]
+
+
+  # ------------------------------------------------------------
+  # PLOT
+  # ------------------------------------------------------------
+  p <- ggplot(df, aes(
+    x = .x,
+    y = .prop,
+    fill = .group,
+    color = .group
+  )) +
+    geom_col(position = position_dodge(width = 0.75), width = 0.75) +
     geom_text(
-      aes(label = proplabel, y = prop, group = groupby_var),
+      aes(label = .lab),
       position = position_dodge(width = text_position),
-      size = label_size, fontface = "bold",
-      show.legend = FALSE,
-      vjust = if (horiz) -0.5 else NULL,
-      hjust = if (!horiz) -0.05 else NULL
+      size = label_size,
+      fontface = "bold",
+      vjust = if (!flip) -0.4 else 0.5,
+      hjust = if (flip) -0.1 else 0.5,
+      show.legend = FALSE
     ) +
-    scale_fill_manual(values = fill_colors) +
-    scale_color_manual(values = color_scheme) +
-    scale_y_continuous(limits = c(ymin, ymax), expand = expansion(mult = 0.002)) +
+    scale_fill_manual(values = mycolors) +
+    scale_color_manual(values = mycolors) +
+    scale_y_continuous(
+      limits = c(ymin, ymax),
+      expand = c(0, 0.03),
+      labels = function(x) paste0(x, "%")
+    ) +
+    scale_x_discrete(
+      labels = function(x) stringr::str_wrap(
+        x,
+        width = if (flip) 45 else 9
+      )
+    ) +
     labs(
       title = main_title,
-      y = y_label,
+      subtitle = subtitle,
+      caption = source_info,
       x = x_label,
-      caption = source_info
+      y = y_label
     ) +
-    { if (subtitle != "") labs(subtitle = subtitle) } +
+    guides(
+      fill  = guide_legend(nrow = 1),
+      color = guide_legend(nrow = 1)
+    ) +
     theme(
       text = element_text(size = 16, family = "sans"),
-      plot.title = element_text(size = 20, family = "sans", face = "bold"),
-      plot.caption = element_text(size = 16, vjust = 2, hjust = 0.02, family = "sans", color = "#585860"),
-      panel.background = element_blank(),
-      panel.border = element_blank(),
-      axis.line.x = element_line(linewidth = 0.6, linetype = "solid", colour = "black"),
-      axis.line.y = element_line(linewidth = 0.6, linetype = "solid", colour = "black"),
-      axis.text.x = element_text(size = textsize_xaxis, family = "sans", color = "black"),
-      axis.text.y = element_text(size = textsize_yaxis, family = "sans", color = "black"),
-      axis.ticks = element_blank(),
-      legend.position = "top",
-      plot.title.position = "plot",
+      plot.title = element_text(size = 20, face = "bold"),
+      plot.subtitle = element_text(size = 16),
+      plot.caption = element_text(size = 14, hjust = 0, color = "#585860"),
       plot.caption.position = "plot",
-      legend.title = element_blank(),
+
+      axis.line = element_line(size = 0.4, color = "black"),
+      axis.text.x = element_text(size = textsize_xaxis, color = "black"),
+      axis.text.y = element_text(size = textsize_yaxis, color = "black"),
+      axis.ticks = element_blank(),
+
+      panel.background = element_rect(fill = "white"),
+      panel.grid = element_blank(),
+
+      panel.grid.major.y =
+        if (!flip) element_line(color = "#585860", size = 0.35, linetype = 2)
+      else element_blank(),
+      panel.grid.major.x =
+        if (flip) element_line(color = "#585860", size = 0.35, linetype = 2)
+      else element_blank(),
+
+      legend.position = "top",
       legend.justification = "left",
-      legend.margin = margin(t = 0, b = 0),
-      legend.text = element_markdown(family = "sans", size = 15)
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.box.margin = margin(b = 5),
+      legend.title = element_blank(),
+
+      plot.margin = margin(t = 20, r = 20, b = 20, l = 5)
     )
 
-  if (horiz) {
-    base_plot +
-      scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 9)) +
-      panel_grid_major_y()
-  } else {
-    base_plot +
-      scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 45)) +
-      panel_grid_major_x() +
-      coord_flip(expand = TRUE)
-  }
-}
+  if (flip) p <- p + coord_flip()
 
-# Helper functions for grid lines (optional)
-panel_grid_major_y <- function() {
-  theme(panel.grid.major.y = element_line(color = "#585860", size = 0.35, linetype = 2))
-}
-panel_grid_major_x <- function() {
-  theme(panel.grid.major.x = element_line(color = "#585860", size = 0.35, linetype = 2))
+  return(p)
 }
