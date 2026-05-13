@@ -4,12 +4,12 @@
 \alias{svy_collapse_single}
 \title{Title}
 \usage{
-svy_collapse_single(data, element_var = NULL, wgt = NULL)
+svy_collapse_single(data, axis_var = NULL, wgt = NULL, groupby_var = NULL)
 }
 \arguments{
 \item{data}{dataset that you are using}
 
-\item{element_var}{the variable that you want to take the weighted mean or weighted proportion of, element_var ="commute_freq"}
+\item{axis_var}{the variable that you want to take the weighted mean or weighted proportion of, axis_var ="commute_freq"}
 
 \item{wgt}{wgt = survey weight, if you're not using weights, just create a column called wgt that is all equal to 1}
 }
@@ -24,5 +24,5 @@ test <- data.frame(
   rider = c("A", "B", "A", "C"),
   wgt   = c(1.2, 0.8, 1.1, 0.9)
 )
-collapsed<-svy_collapse_single(data=test, element_var = "rider", wgt="wgt")
+collapsed<-svy_collapse_single(data=test, axis_var = "rider", wgt="wgt")
 }

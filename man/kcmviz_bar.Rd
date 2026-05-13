@@ -6,7 +6,7 @@
 \usage{
 kcmviz_bar(
   data,
-  element_var = NULL,
+  axis_var = NULL,
   prop = NULL,
   proplabel = NULL,
   ymin = 0,
@@ -26,7 +26,7 @@ kcmviz_bar(
 as well as the proportion (prop) and the nicely labeled proportion (prop_label). Using the "svycollapse" function, you can
 create the data frame necessary to create all the variables.}
 
-\item{element_var}{This is the variable used for the axis -- the descriptive variable.}
+\item{axis_var}{This is the variable used for the axis -- the descriptive variable.}
 
 \item{prop}{This is the proportion of responses that fall in the category. For categorical variables, it'll be the
 proportion of respondents that fit in each category (adding to 100%). For multiple select, you'll need to make sure to

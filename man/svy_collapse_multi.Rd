@@ -6,7 +6,7 @@
 \usage{
 svy_collapse_multi(
   data,
-  element_var = NULL,
+  axis_var = NULL,
   response_category = NULL,
   wgt = NULL,
   groupby_var = NULL,
@@ -16,7 +16,7 @@ svy_collapse_multi(
 \arguments{
 \item{data}{dataset}
 
-\item{element_var}{element_var}
+\item{axis_var}{axis_var}
 
 \item{response_category}{response_category}
 
@@ -33,11 +33,9 @@ a collapsed dataset that shows the proportion of each response across the elemen
 Title
 }
 \examples{
-#' test <- data.frame(
-  rider = c("rider", "non-rider", "rider", "non-rider", "rider",  "non-rider", "non-rider", "rider"),
-  transit_interest = c("interested", "very "interested", "somewhat interested",
-  "not all interested", "interested", "very "interested", "somewhat interested", "not all interested"),
-  wgt   = c(1.2, 0.8, 1.1, 0.9, 1.2, 0.8, 1.1, 0.9)
-)
-collapse<-svy_collapse_multi(test, element_var = "rider", response_category = "transit_interest", wgt="wgt")
+test <- data.frame(
+ rider = c("rider", "non-rider", "rider", "non-rider", "rider","non-rider", "non-rider", "rider"),
+ transit_interest = c("interested", "very", "somewhat", "not", "interested", "very", "somewhat", "not"),
+ wgt   = c(1.2, 0.8, 1.1, 0.9, 1.2, 0.8, 1.1, 0.9))
+collapse<-svy_collapse_multi(test, axis_var = "rider", response_category = "transit_interest", wgt= "wgt")
 }

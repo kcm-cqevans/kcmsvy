@@ -1,7 +1,7 @@
 #' Title
 #'
 #' @param data dataset
-#' @param element_var element_var
+#' @param axis_var axis_var
 #' @param response_category response_category
 #' @param wgt weight
 #' @param groupby_var groupby_var
@@ -11,29 +11,27 @@
 #' @export
 #'
 #' @examples
-#' #' test <- data.frame(
-#'   rider = c("rider", "non-rider", "rider", "non-rider", "rider",  "non-rider", "non-rider", "rider"),
-#'   transit_interest = c("interested", "very "interested", "somewhat interested",
-#'   "not all interested", "interested", "very "interested", "somewhat interested", "not all interested"),
-#'   wgt   = c(1.2, 0.8, 1.1, 0.9, 1.2, 0.8, 1.1, 0.9)
-#' )
-#' collapse<-svy_collapse_multi(test, element_var = "rider", response_category = "transit_interest", wgt="wgt")
+#'test <- data.frame(
+#'  rider = c("rider", "non-rider", "rider", "non-rider", "rider","non-rider", "non-rider", "rider"),
+#'  transit_interest = c("interested", "very", "somewhat", "not", "interested", "very", "somewhat", "not"),
+#'  wgt   = c(1.2, 0.8, 1.1, 0.9, 1.2, 0.8, 1.1, 0.9))
+#' collapse<-svy_collapse_multi(test, axis_var = "rider", response_category = "transit_interest", wgt= "wgt")
 svy_collapse_multi <- function(data,
-                               element_var = NULL,
+                               axis_var = NULL,
                                response_category = NULL,
                                wgt = NULL,
                                groupby_var = NULL,
                                binary_response_category = FALSE) {
 
   # --- 1) Default to canonical names if args are NULL ---
-  element_var       <- if (is.null(element_var))       "element_var"       else element_var
+  axis_var       <- if (is.null(axis_var))       "axis_var"       else axis_var
   response_category <- if (is.null(response_category)) "response_category" else response_category
   wgt               <- if (is.null(wgt))               "wgt"               else wgt
   # groupby_var: can be NULL, a single string, or a character vector of column names
 
   # Validate that required columns exist in `data`
   missing_cols <- setdiff(
-    c(element_var, response_category, wgt, if (!is.null(groupby_var)) groupby_var),
+    c(axis_var, response_category, wgt, if (!is.null(groupby_var)) groupby_var),
     names(data)
   )
   if (length(missing_cols) > 0) {
@@ -45,9 +43,9 @@ svy_collapse_multi <- function(data,
   data_std <- data
 
   # Protect against existing canonical names to avoid accidental overwrite
-  if (!identical(element_var, "element_var") && ("element_var" %in% names(data_std))) {
-    stop("Column 'element_var' already exists in `data`. Refusing to overwrite. ",
-         "Either pass element_var = 'element_var' or rename the existing column.")
+  if (!identical(axis_var, "axis_var") && ("axis_var" %in% names(data_std))) {
+    stop("Column 'axis_var' already exists in `data`. Refusing to overwrite. ",
+         "Either pass axis_var = 'axis_var' or rename the existing column.")
   }
   if (!identical(response_category, "response_category") && ("response_category" %in% names(data_std))) {
     stop("Column 'response_category' already exists in `data`. Refusing to overwrite. ",
@@ -62,9 +60,9 @@ svy_collapse_multi <- function(data,
   }
 
   # Perform renames
-  if (!identical(element_var, "element_var")) {
-    data_std <- dplyr::rename(data_std, element_var = !!rlang::sym(element_var))
-    element_var <- "element_var"
+  if (!identical(axis_var, "axis_var")) {
+    data_std <- dplyr::rename(data_std, axis_var = !!rlang::sym(axis_var))
+    axis_var <- "axis_var"
   }
   if (!identical(response_category, "response_category")) {
     data_std <- dplyr::rename(data_std, response_category = !!rlang::sym(response_category))
@@ -79,8 +77,8 @@ svy_collapse_multi <- function(data,
   }
 
   # --- 3) Tidyselect-friendly grouping vectors ---
-  grp_vars_with_group <- c(groupby_var, element_var, response_category)
-  grp_vars_no_group   <- c(element_var, response_category)
+  grp_vars_with_group <- c(groupby_var, axis_var, response_category)
+  grp_vars_no_group   <- c(axis_var, response_category)
 
   # --- 4) Prefilter NAs on relevant columns ---
   # Support single or multiple grouping columns:
@@ -88,18 +86,18 @@ svy_collapse_multi <- function(data,
     if (length(groupby_var) == 1) {
       df %>%
         dplyr::filter(!is.na(.data[[groupby_var]]),
-                      !is.na(.data[[element_var]]),
+                      !is.na(.data[[axis_var]]),
                       !is.na(.data[[response_category]]))
     } else {
       df %>%
         dplyr::filter(dplyr::if_all(dplyr::all_of(groupby_var), ~ !is.na(.)),
-                      !is.na(.data[[element_var]]),
+                      !is.na(.data[[axis_var]]),
                       !is.na(.data[[response_category]]))
     }
   }
   prefilter_ungrouped <- function(df) {
     df %>%
-      dplyr::filter(!is.na(.data[[element_var]]),
+      dplyr::filter(!is.na(.data[[axis_var]]),
                     !is.na(.data[[response_category]]))
   }
 

@@ -9,7 +9,7 @@
 #' proportion of respondents that fit in each category (adding to 100%). For multiple select, you'll need to make sure to
 #' transpose to long form. Then, it'll be the proportion of respondents who selected yes or no.
 #' @param proplabel This is the same as the proportion, except with formatting and labeling appropriate for graphs.
-#' @param element_var This is the variable used for the axis -- the descriptive variable.
+#' @param axis_var This is the variable used for the axis -- the descriptive variable.
 #' @param ymin This is the minimum of the y-axis for the graph
 #' @param ymax This is the maximum of the y-axis for the graph
 #' @param main_title This is the main title of the grpah
@@ -32,7 +32,7 @@
 #'
 
 kcmviz_bar<-function(data,
-                     element_var = NULL,   # string; auto-detect "element_var" if NULL
+                     axis_var = NULL,   # string; auto-detect "axis_var" if NULL
                      prop        = NULL,   # string; auto-detect "prop" or "percent" if NULL
                      proplabel   = NULL,   # string; auto-detect "proplabel" if NULL
                      ymin = 0,
@@ -51,16 +51,16 @@ kcmviz_bar<-function(data,
   # --- Invert horizontal behavior (as per your earlier requirement) ---
   flip <- !isTRUE(horiz)  # horiz=TRUE -> vertical; horiz=FALSE -> horizontal
 
-  # --- Auto-detect element_var if not provided ---
-  if (is.null(element_var)) {
-    if ("element_var" %in% names(data)) {
-      element_var <- "element_var"
+  # --- Auto-detect axis_var if not provided ---
+  if (is.null(axis_var)) {
+    if ("axis_var" %in% names(data)) {
+      axis_var <- "axis_var"
     } else {
-      stop("Please provide `element_var`, or include a column named 'element_var' in `data`.")
+      stop("Please provide `axis_var`, or include a column named 'axis_var' in `data`.")
     }
   }
-  if (!element_var %in% names(data)) {
-    stop("`element_var` not found in `data`: ", element_var)
+  if (!axis_var %in% names(data)) {
+    stop("`axis_var` not found in `data`: ", axis_var)
   }
 
   # --- Auto-detect prop if not provided ---
@@ -88,7 +88,7 @@ kcmviz_bar<-function(data,
   # --- Prepare plotting frame ---
   df <- data %>%
     mutate(
-      .x    = .data[[element_var]],
+      .x    = .data[[axis_var]],
       .prop = .data[[prop]],
       # Convert 0–1 proportions to percent; leave 0–100 as-is
       .prop = if (is.numeric(.prop) && max(.prop, na.rm = TRUE) <= 1) .prop * 100 else .prop,
@@ -107,7 +107,7 @@ kcmviz_bar<-function(data,
   df <- df %>% mutate(.x = factor(.x, levels = .x))
 
   # --- Build base plot ---
-  update_geom_defaults("text", list(family = "inter"))
+  update_geom_defaults("text", list(family = "sans"))
 
   p <- ggplot(df, aes(x = .x, y = .prop)) +
     geom_col(color = color_scheme, fill = color_scheme, width = 0.75) +
@@ -125,15 +125,15 @@ kcmviz_bar<-function(data,
          caption = source_info,
          subtitle = subtitle) +
     theme(
-      text = element_text(size = 18, family = "inter"),
-      plot.title = element_text(size = 24, family = "inter", face = "bold"),
-      plot.caption = element_text(size = 16, hjust = 0.02, vjust = 2, family = "inter", color = "#585860"),
-      plot.subtitle = element_text(size = 18, family = "inter-light", color = "#242424"),
+      text = element_text(size = 18, family = "sans"),
+      plot.title = element_text(size = 24, family = "sans", face = "bold"),
+      plot.caption = element_text(size = 16, hjust = 0.02, vjust = 2, family = "sans", color = "#585860"),
+      plot.subtitle = element_text(size = 18, family = "sans", color = "#242424"),
       axis.line = element_line(size = 0.5, color = "black"),
       plot.title.position = "plot",
       plot.caption.position = "plot",
-      axis.text.x = element_text(size = textsize_xaxis, family = "inter-light", color = "black"),
-      axis.text.y = element_text(size = textsize_yaxis, family = "inter-light", color = "black"),
+      axis.text.x = element_text(size = textsize_xaxis, family = "sans", color = "black"),
+      axis.text.y = element_text(size = textsize_yaxis, family = "sans", color = "black"),
       panel.background = element_rect(fill = "white"),
       panel.grid.major.y = if (!flip) element_line(color = "#585860", size = 0.35, linetype = 2) else element_blank(),
       panel.grid.major.x = if (flip) element_line(color = "#585860", size = 0.35, linetype = 2) else element_blank()

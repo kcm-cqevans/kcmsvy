@@ -8,12 +8,12 @@ For example, you might might to show the proportion of people who cite each barr
 \usage{
 kcmviz_clusterbar(
   data,
-  element_var = data$element_var,
+  element_var = NULL,
   prop = data$prop,
   lower_bound = data$prop_low,
   upper_bound = data$prop_upp,
   proplabel = data$proplabel,
-  groupby_var = data$groupby_var,
+  groupby_var = NULL,
   ymin = 0,
   ymax = 100,
   main_title = "",

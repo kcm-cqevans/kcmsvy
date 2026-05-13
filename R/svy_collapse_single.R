@@ -5,7 +5,7 @@
 #' @importFrom dplyr across
 #'
 #' @param data dataset that you are using
-#' @param element_var the variable that you want to take the weighted mean or weighted proportion of, element_var ="commute_freq"
+#' @param axis_var the variable that you want to take the weighted mean or weighted proportion of, axis_var ="commute_freq"
 #' @param wgt wgt = survey weight, if you're not using weights, just create a column called wgt that is all equal to 1
 #'
 #' @returns a collapsed set of survey-weighted means
@@ -16,40 +16,69 @@
 #'   rider = c("A", "B", "A", "C"),
 #'   wgt   = c(1.2, 0.8, 1.1, 0.9)
 #' )
-#' collapsed<-svy_collapse_single(data=test, element_var = "rider", wgt="wgt")
-svy_collapse_single <- function(data, element_var = NULL, wgt = NULL) {
-  # Default to canonical names if present
-  element_var <- if (is.null(element_var)) "element_var" else element_var
-  wgt         <- if (is.null(wgt))         "wgt"         else wgt
+#' collapsed<-svy_collapse_single(data=test, axis_var = "rider", wgt="wgt")
+svy_collapse_single <- function(data,
+                                axis_var = NULL,
+                                wgt = NULL,
+                                groupby_var = NULL) {
 
-  # Validate columns
-  missing <- setdiff(c(element_var, wgt), names(data))
-  if (length(missing) > 0) {
-    stop("Missing columns in `data`: ", paste(missing, collapse = ", "))
+  # --- 1) Use provided names exactly ---
+  if (is.null(axis_var)) stop("axis_var must be supplied")
+  if (is.null(wgt))      stop("wgt must be supplied")
+
+  # --- 2) Validate columns ---
+  needed_cols <- c(axis_var, wgt, if (!is.null(groupby_var)) groupby_var)
+  missing_cols <- setdiff(needed_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop("Missing columns in `data`: ", paste(missing_cols, collapse = ", "))
   }
 
-  # Build simple survey design (no clustering)
-  design <- data %>%
-    filter(!is.na(.data[[element_var]]), !is.na(.data[[wgt]])) %>%
-    as_survey_design(ids = NULL, weights = !!rlang::sym(wgt))
+  # --- 3) Prefilter NA values ---
+  if (is.null(groupby_var)) {
+    data_f <- data %>%
+      dplyr::filter(
+        !is.na(.data[[axis_var]]),
+        !is.na(.data[[wgt]])
+      )
+  } else if (length(groupby_var) == 1) {
+    data_f <- data %>%
+      dplyr::filter(
+        !is.na(.data[[axis_var]]),
+        !is.na(.data[[wgt]]),
+        !is.na(.data[[groupby_var]])
+      )
+  } else {
+    # multiple grouping variables
+    data_f <- data %>%
+      dplyr::filter(
+        !is.na(.data[[axis_var]]),
+        !is.na(.data[[wgt]]),
+        dplyr::if_all(dplyr::all_of(groupby_var), ~ !is.na(.))
+      )
+  }
 
-  # Proportion per level of the variable (with CI), then scale to percent
+  # --- 4) Survey design ---
+  design <- data_f %>%
+    srvyr::as_survey_design(ids = NULL, weights = !!rlang::sym(wgt))
+
+  # --- 5) Grouping structure ---
+  grouping_vars <- if (is.null(groupby_var)) {
+    axis_var
+  } else {
+    c(groupby_var, axis_var)
+  }
+
+  # --- 6) Calculate proportions + CI ---
   out <- design %>%
-    group_by(!!rlang::sym(element_var)) %>%
-    summarize(
+    dplyr::group_by(dplyr::across(dplyr::all_of(grouping_vars))) %>%
+    srvyr::summarize(
       prop = survey_prop(na.rm = TRUE, vartype = "ci"),
       .groups = "drop"
     ) %>%
-    # Convert estimate + CI to percent
-    mutate(
-      across(c(prop, prop_low, prop_upp), ~ . * 100),
+    dplyr::mutate(
+      dplyr::across(c(prop, prop_low, prop_upp), ~ . * 100),
       proplabel = paste0(round(prop, 1), "%")
     )
 
-  # Rename the grouping column to literal "element_var"
-  # (tidyselect-safe; works whether you passed "element_var" or a different name)
-  out <- out %>%
-    dplyr::rename_with(~ "element_var", dplyr::all_of(element_var))
-
-  return(out)
+  out
 }

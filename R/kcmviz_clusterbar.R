@@ -4,9 +4,9 @@
 #' For example, you might might to show the proportion of people who cite each barrier to transit use across their rider status.
 #'
 #' @param data Data frame that you are referencing
-#' @param element_var The axis variable, in the example above - this will be the column that holds all of the barrier types.
-#' @param lower_bound lower bound of confidence intervals
-#' @param upper_bound upper bound of confidence intervals
+#' @param axis_bar The axis variable, in the example above - this will be the column that holds all of the barrier types.
+#' @param lower_bound lower bound of confidence sansvals
+#' @param upper_bound upper bound of confidence sansvals
 #' @param prop This is the calculated proportion, without formatting for display
 #' @param proplabel The labelled proportion variable. This is the actual value you will be displaying, ideally in format XX.X%
 #' @param groupby_var This is the grouping variable. In the example above, this will be rider status.
@@ -27,12 +27,12 @@
 #'
 #' @return A nice pretty graph
 #' @export
-kcmviz_clusterbar<- function(data,
-                             element_var = data$element_var,
+kcmviz_clusterbar_test<- function(data,
+                             axis_var = NULL,
                              prop = data$prop,
                              lower_bound = data$prop_low, upper_bound = data$prop_upp,
                              proplabel = data$proplabel,
-                             groupby_var = data$groupby_var,
+                             groupby_var =NULL,
                              ymin = 0, ymax = 100,
                              main_title = "", source_info = "", subtitle = "",
                              sort = "",
@@ -44,13 +44,13 @@ kcmviz_clusterbar<- function(data,
                              textsize_yaxis = 16,
                              textsize_xaxis = 16) {
   # Ensure expected columns exist
-  needed <- c("element_var", "prop", "proplabel", "groupby_var")
+  needed <- c("axis_var", "prop", "proplabel", "groupby_var")
   miss <- setdiff(needed, names(data))
   if (length(miss) > 0) {
     stop("Missing columns in `data`: ", paste(miss, collapse = ", "))
   }
 
-  # Compute the desired order of element_var based on sort directive
+  # Compute the desired order of axis_var based on sort directive
   # All groups will use the same x-order derived from the specified target group.
   # "group1_asc"/"group1_desc" -> use the first group level;
   # "group2_asc"/"group2_desc" -> second level; "group3_*" -> third level.
@@ -64,7 +64,7 @@ kcmviz_clusterbar<- function(data,
     out <- df %>%
       filter(groupby_var == target) %>%
       arrange(if (ascending) prop else desc(prop)) %>%
-      pull(element_var)
+      pull(axis_var)
     # In case of ties, `arrange` is stable; ensure unique order
     unique(out)
   }
@@ -84,36 +84,35 @@ kcmviz_clusterbar<- function(data,
   } else if (sort == "group3_desc") {
     order_vec <- get_target_group_order(data, group_index = 3, ascending = FALSE)
   } else if (sort == "alpha") {
-    order_vec <- sort(unique(data$element_var))
+    order_vec <- sort(unique(data$axis_var))
   }
 
-  # If we computed an order, set factor levels on element_var
+  # If we computed an order, set factor levels on axis_var
   if (!is.null(order_vec)) {
-    # Include any levels not present in the target (e.g., if some element_var only appears in other groups)
-    all_levels <- unique(c(order_vec, unique(data$element_var)))
+    # Include any levels not present in the target (e.g., if some axis_var only appears in other groups)
+    all_levels <- unique(c(order_vec, unique(data$axis_var)))
     # Keep target-derived levels first, followed by any extras in alpha order to avoid NA placement
     extras <- setdiff(all_levels, order_vec)
     final_levels <- c(order_vec, sort(extras))
     data <- data %>%
       mutate(
-        element_var = factor(element_var, levels = final_levels)
+        axis_var = factor(axis_var, levels = final_levels)
       )
   } else {
     # Default: keep current order of appearance
     data <- data %>%
-      mutate(element_var = factor(element_var, levels = unique(element_var)))
+      mutate(axis_var = factor(axis_var, levels = unique(axis_var)))
   }
 
   # Colors
   fill_colors <- paste0(color_scheme, "")
 
   # Shared plot bits
-  update_geom_defaults("text", list(family = "inter"))
 
   base_plot <- ggplot(
     data = data,
     aes(
-      x = factor(element_var, levels = levels(element_var)),
+      x = factor(axis_var, levels = levels(axis_var)),
       y = prop,
       fill = groupby_var,
       color = groupby_var
@@ -139,15 +138,15 @@ kcmviz_clusterbar<- function(data,
     ) +
     { if (subtitle != "") labs(subtitle = subtitle) } +
     theme(
-      text = element_text(size = 16, family = "inter"),
-      plot.title = element_text(size = 20, family = "inter", face = "bold"),
-      plot.caption = element_text(size = 16, vjust = 2, hjust = 0.02, family = "inter", color = "#585860"),
+      text = element_text(size = 16, family = "sans"),
+      plot.title = element_text(size = 20, family = "sans", face = "bold"),
+      plot.caption = element_text(size = 16, vjust = 2, hjust = 0.02, family = "sans", color = "#585860"),
       panel.background = element_blank(),
       panel.border = element_blank(),
       axis.line.x = element_line(linewidth = 0.6, linetype = "solid", colour = "black"),
       axis.line.y = element_line(linewidth = 0.6, linetype = "solid", colour = "black"),
-      axis.text.x = element_text(size = textsize_xaxis, family = "inter-light", color = "black"),
-      axis.text.y = element_text(size = textsize_yaxis, family = "inter-light", color = "black"),
+      axis.text.x = element_text(size = textsize_xaxis, family = "sans", color = "black"),
+      axis.text.y = element_text(size = textsize_yaxis, family = "sans", color = "black"),
       axis.ticks = element_blank(),
       legend.position = "top",
       plot.title.position = "plot",
@@ -155,7 +154,7 @@ kcmviz_clusterbar<- function(data,
       legend.title = element_blank(),
       legend.justification = "left",
       legend.margin = margin(t = 0, b = 0),
-      legend.text = element_markdown(family = "inter-light", size = 15)
+      legend.text = element_markdown(family = "sans", size = 15)
     )
 
   if (horiz) {
