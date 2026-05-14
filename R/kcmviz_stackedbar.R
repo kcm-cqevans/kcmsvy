@@ -134,7 +134,8 @@ kcmviz_stackedbar <- function(
       position = position_stack(vjust = 0.5),
       color = "#FFFFFF",
       fontface = "bold",
-      size = 5
+      size = 5,
+      na.rm=TRUE
     ) +
     coord_flip() +
     scale_fill_manual(values = mycolors) +
@@ -166,7 +167,7 @@ kcmviz_stackedbar <- function(
 
       panel.background = element_rect(fill = "white"),
       panel.grid = element_blank(),
-      panel.grid.major.x = element_line(color = "#585860", size = 0.35, linetype = 2),
+      panel.grid.major.x = element_line(color = "#585860", linewidth = 0.35, linetype = 2),
 
       legend.position = "top",
       legend.justification = "left",
