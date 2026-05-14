@@ -2,7 +2,7 @@
 % Please edit documentation in R/svyreshape_long.R
 \name{svyreshape_long}
 \alias{svyreshape_long}
-\title{Title}
+\title{Reshape Survey Data}
 \usage{
 svyreshape_long(
   data,
@@ -13,8 +13,25 @@ svyreshape_long(
 )
 }
 \arguments{
-\item{drop_na}{}
+\item{data}{A dataframe containing survey data.}
+
+\item{pivot_cols}{Optional vector of string column names to pivot into longer format.
+If NULL and `not_pivot_cols` is specified, all columns not in `not_pivot_cols` will be pivoted.}
+
+\item{not_pivot_cols}{Optional vector of string column names not to pivot into longer format.
+If specified, `pivot_cols` should be NULL.}
+
+\item{drop_cols}{Optional vector of string column names to be dropped from `data` before reshaping.}
+
+\item{drop_na}{Logical; if TRUE, rows with NA values in the `response` column after pivoting will be dropped.}
+}
+\value{
+A long format dataframe with specified or inferred pivoted columns, optionally excluding specified columns
+  and/or rows with NA values.
 }
 \description{
-Title
+This function reshapes a survey dataframe from wide to long format, allowing for
+optional dropping of specified columns and NA values. Users can specify columns
+to pivot, columns not to pivot, columns to drop, and whether to drop rows with NA
+values in the pivoted columns.
 }

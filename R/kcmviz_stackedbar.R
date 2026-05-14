@@ -22,6 +22,7 @@
 #' @import ggplot2
 #' @return A ggplot object representing the agreement visualization.
 #' @export
+#'
 kcmviz_stackedbar <- function(
     data,
     prop = NULL,       # now auto-detected from prop/percent
